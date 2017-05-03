@@ -14,7 +14,6 @@ mod entity;
 use entity::*;
 use orm::Entity;
 
-
 trait ReadContent {
     fn read_content(&mut self) -> Vec<u8>;
 }
@@ -123,7 +122,7 @@ fn main() {
     }).collect::<Vec<_>>();
 
     let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
-    db.create_tables();
+    db.rebuild();
     let session = db.open_session();
     for item in res {
         let mut m = Mod::default();

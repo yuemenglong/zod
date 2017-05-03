@@ -6,7 +6,9 @@ build = "build.rs"
 
 [dependencies]
 glob = "*"
-orm = "*"
 
-[build-dependencies]
-orm = "*"
+[build-dependencies.orm]
+path = "../orm"
+
+[dependencies.orm]
+path = "../orm"

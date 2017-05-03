@@ -1,3 +1,4 @@
+#[table(tbl_mod)]
 struct Mod {
     no: String,
     kind: String,
