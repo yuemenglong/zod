@@ -117,14 +117,18 @@ fn parse_file(path: PathBuf) -> Vec<Vec<String>> {
 fn main() {
     let dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let path = Path::new(&dir).join("list/characustom/*.unity3d");
-    let res = glob(path.to_str().unwrap()).unwrap().into_iter().flat_map(|entry| {
-        return parse_file(entry.unwrap());
-    }).collect::<Vec<_>>();
+    let res = glob(path.to_str().unwrap())
+        .unwrap()
+        .into_iter()
+        .flat_map(|entry| {
+            return parse_file(entry.unwrap());
+        })
+        .collect::<Vec<_>>();
 
     let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
     db.rebuild();
     let session = db.open_session();
-    for item in res {
+    for item in res.iter() {
         let mut m = Mod::default();
         m.set_no(&item[0]);
         m.set_kind(&item[1]);
@@ -134,23 +138,22 @@ fn main() {
         m.set_sys("new");
         m.set_list(&item[5]);
         // println!("{:?}", m);
-        session.insert(&m);
+        session.insert(&m).unwrap();
     }
     session.close();
-    // println!("{:?}", res.len());
+
+    // let mut counter = 0;
     // let mut map = HashMap::new();
-    // for item in res{
+    // for item in res.iter() {
     //     let name = item[0].clone();
-    //     if map.contains_key(&name){
+    //     if map.contains_key(&name) {
     //         println!("{:?}", item);
     //         println!("{:?}", map.get(&name).unwrap());
     //         println!("");
+    //         counter = counter + 1;
     //     }
     //     map.entry(name.clone()).or_insert(item);
-    //     // println!("{}", item[2]);
     // }
-    // let res = parse_file(path);
-    // for item in res {
-    //     println!("{:?}", item);
-    // }
+    // println!("{:?}", res.len());
+    // println!("{:?}", counter);
 }
