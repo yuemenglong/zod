@@ -1,0 +1,12 @@
+[package]
+name = "zod"
+version = "0.1.0"
+authors = ["yml <yuemenglong@126.com>"]
+build = "build.rs"
+
+[dependencies]
+glob = "*"
+orm = "*"
+
+[build-dependencies]
+orm = "*"
