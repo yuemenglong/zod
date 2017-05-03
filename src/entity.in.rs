@@ -5,4 +5,5 @@ struct Mod {
     dir: String,
     file: String,
     sys: String,
+    list: String,
 }

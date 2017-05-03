@@ -1,3 +1,4 @@
+extern crate orm;
 extern crate glob;
 use glob::glob;
 
@@ -8,6 +9,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::error::Error;
 use std::collections::HashMap;
+
+mod entity;
+use entity::*;
+use orm::Entity;
 
 
 trait ReadContent {
@@ -23,7 +28,8 @@ impl ReadContent for File {
 }
 
 fn parse_file(path: PathBuf) -> Vec<Vec<String>> {
-    let res = File::open(path);
+    let res = File::open(path.clone());
+    let list_path = path.to_str().unwrap();
     let mut file = res.unwrap();
     let content = file.read_content();
     let arr = content.as_slice();
@@ -97,11 +103,12 @@ fn parse_file(path: PathBuf) -> Vec<Vec<String>> {
                 return false;
             }
         }).unwrap();
-        let vec = vec.into_iter().map(|s| String::from_utf8(s).unwrap()).collect::<Vec<_>>();
+        let mut vec = vec.into_iter().map(|s| String::from_utf8(s).unwrap()).collect::<Vec<_>>();
         if &vec[3] != "abdata"{
             // println!("{:?}", vec);
             // unreachable!();
         }
+        vec.push(list_path.to_string());
         acc.push(vec);
         return acc;
     });
@@ -114,18 +121,35 @@ fn main() {
     let res = glob(path.to_str().unwrap()).unwrap().into_iter().flat_map(|entry| {
         return parse_file(entry.unwrap());
     }).collect::<Vec<_>>();
-    println!("{:?}", res.len());
-    let mut map = HashMap::new();
-    for item in res{
-        let name = item[0].clone();
-        if map.contains_key(&name){
-            println!("{:?}", item);
-            println!("{:?}", map.get(&name).unwrap());
-            println!("");
-        }
-        map.entry(name.clone()).or_insert(item);
-        // println!("{}", item[2]);
+
+    let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
+    db.create_tables();
+    let session = db.open_session();
+    for item in res {
+        let mut m = Mod::default();
+        m.set_no(&item[0]);
+        m.set_kind(&item[1]);
+        m.set_name(&item[2]);
+        m.set_dir(&item[3]);
+        m.set_file(&item[4]);
+        m.set_sys("new");
+        m.set_list(&item[5]);
+        // println!("{:?}", m);
+        session.insert(&m);
     }
+    session.close();
+    // println!("{:?}", res.len());
+    // let mut map = HashMap::new();
+    // for item in res{
+    //     let name = item[0].clone();
+    //     if map.contains_key(&name){
+    //         println!("{:?}", item);
+    //         println!("{:?}", map.get(&name).unwrap());
+    //         println!("");
+    //     }
+    //     map.entry(name.clone()).or_insert(item);
+    //     // println!("{}", item[2]);
+    // }
     // let res = parse_file(path);
     // for item in res {
     //     println!("{:?}", item);
