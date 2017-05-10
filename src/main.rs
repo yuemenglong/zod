@@ -13,6 +13,8 @@ use std::collections::HashMap;
 mod entity;
 use entity::*;
 use orm::Entity;
+use orm::Insert;
+use orm::Select;
 
 trait ReadContent {
     fn read_content(&mut self) -> Vec<u8>;
@@ -114,7 +116,7 @@ fn parse_file(path: PathBuf) -> Vec<Vec<String>> {
     return res;
 }
 
-fn main() {
+fn build_db() {
     let dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let path = Path::new(&dir).join("list/characustom/*.unity3d");
     let res = glob(path.to_str().unwrap())
@@ -127,7 +129,8 @@ fn main() {
 
     let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
     db.rebuild();
-    let session = db.open_session();
+    // let session = db.open_session();
+    let insert = Insert::new();
     for item in res.iter() {
         let mut m = Mod::default();
         m.set_no(&item[0]);
@@ -137,10 +140,21 @@ fn main() {
         m.set_file(&item[4]);
         m.set_sys("new");
         m.set_list(&item[5]);
+        insert.execute(&mut db.get_conn(), &m).unwrap();
         // println!("{:?}", m);
-        session.insert(&m).unwrap();
+        // session.insert(&m).unwrap();
     }
-    session.close();
+    // session.close();
+}
+
+fn select_dup(){
+    let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
+    let mut select = Select::new();    
+    
+}
+
+fn main() {
+    build_db();
 
     // let mut counter = 0;
     // let mut map = HashMap::new();
