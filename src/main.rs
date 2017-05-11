@@ -15,6 +15,9 @@ use entity::*;
 use orm::Entity;
 use orm::Insert;
 use orm::Select;
+use orm::Db;
+use orm::JoinCond;
+use orm::Cond;
 
 trait ReadContent {
     fn read_content(&mut self) -> Vec<u8>;
@@ -116,9 +119,11 @@ fn parse_file(path: PathBuf) -> Vec<Vec<String>> {
     return res;
 }
 
-fn build_db() {
+fn insert_list(base: &str, sys: &str, db: &Db) {
     let dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let path = Path::new(&dir).join("list/characustom/*.unity3d");
+    let pattern = format!("{}/characustom/*.unity3d", base);
+    // let path = Path::new(&dir).join("list/characustom/*.unity3d");
+    let path = Path::new(&dir).join(pattern);
     let res = glob(path.to_str().unwrap())
         .unwrap()
         .into_iter()
@@ -127,10 +132,8 @@ fn build_db() {
         })
         .collect::<Vec<_>>();
 
-    let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
-    db.rebuild();
+
     // let session = db.open_session();
-    let insert = Insert::new();
     for item in res.iter() {
         let mut m = Mod::default();
         m.set_no(&item[0]);
@@ -138,24 +141,88 @@ fn build_db() {
         m.set_name(&item[2]);
         m.set_dir(&item[3]);
         m.set_file(&item[4]);
-        m.set_sys("new");
+        m.set_sys(sys);
         m.set_list(&item[5]);
-        insert.execute(&mut db.get_conn(), &m).unwrap();
+        db.insert(&m).unwrap();
         // println!("{:?}", m);
         // session.insert(&m).unwrap();
     }
     // session.close();
 }
 
-fn select_dup(){
+fn select_dup() {
     let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
-    let mut select = Select::new();    
-    
+    let mut select = Select::<Mod>::new();
+    select.wher(&Cond::by_eq("sys", "old"));
+    select.join::<Mod>(JoinCond::by_eq("no", "no").eq("sys", "sys").lt("id", "id"));
+    let res = db.query_ex(&select).unwrap();
+    // println!("{:?}", res[0].len());
+    for i in 0..res[0].len() - 1 {
+        res[0][i].debug();
+        res[1][i].debug();
+        println!("");
+    }
+    println!("{:?}", res[0].len());
+}
+
+fn select_diff() {
+    let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
+    let mut select = Select::<Mod>::new();
+    select.wher(&Cond::by_eq("sys", "new"));
+    select.left_join::<Mod>(&JoinCond::by_eq("name", "name"))
+        .on(&Cond::by_eq("sys", "old"))
+        .wher(&Cond::by_is_null("id"));
+    let res = db.query_ex(&select).unwrap();
+    for item in res[0].iter() {
+        item.debug();
+    }
+
+    // let mut select = Select::<Mod>::new();
+    // select.wher(&Cond::by_eq("sys", "old"));
+    // let old_res = db.query(&select).unwrap();
+    // println!("old: {:?}", old_res.len());
+
+    // let mut select = Select::<Mod>::new();
+    // select.wher(&Cond::by_eq("sys", "new"));
+    // let new_res = db.query(&select).unwrap();
+    // println!("new: {:?}", new_res.len());
+
+    // let new_map = new_res.iter()
+    //     .map(|m| (m.get_name().to_string(), m))
+    //     .collect::<HashMap<_, _>>();
+
+    // let old_diff = old_res.iter()
+    //     .filter(|m| !new_map.contains_key(&m.get_name()))
+    //     .collect::<Vec<_>>();
+    // println!("old_diff: {:?}", old_diff.len());
+
+    // let old_map = old_res.iter()
+    //     .map(|m| (m.get_name().to_string(), m))
+    //     .collect::<HashMap<_, _>>();
+
+    // let new_diff = new_res.iter()
+    //     .filter(|m| !old_map.contains_key(&m.get_name()))
+    //     .collect::<Vec<_>>();
+    // println!("new_diff: {:?}", new_diff.len());
+
+
+
+    // println!("{:?}", res[0].len());
+    // for i in 0..res[0].len() - 1 {
+    //     res[0][i].debug();
+    //     println!("");
+    // }
+}
+
+fn rebuild() {
+    let db = orm::open("root", "root", "172.16.16.224", 3306, "zod", orm_meta()).unwrap();
+    db.rebuild();
+    insert_list("list", "new", &db);
+    insert_list("list2", "old", &db);
 }
 
 fn main() {
-    build_db();
-
+    select_diff();
     // let mut counter = 0;
     // let mut map = HashMap::new();
     // for item in res.iter() {

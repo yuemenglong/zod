@@ -1,4 +1,5 @@
 #[table(tbl_mod)]
+#[alias(modd)]
 struct Mod {
     no: String,
     kind: String,
